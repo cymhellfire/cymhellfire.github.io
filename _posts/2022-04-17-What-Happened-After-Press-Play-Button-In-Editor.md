@@ -19,16 +19,16 @@ _Hover cursor on the Play button_
 
 In RegisterCommands() function of *DebuggerCommands.cpp*, a **UI_Command** named **PlayInViewPort** takes above tooltips. Code like follows:
 
-```C++
+````C++
 ... line:334
 	UI_COMMAND(PlayInViewport, "Selected Viewport", "Play this level in the active level editor viewport", EUserInterfaceActionType::Check, FInputChord());
 ...
-```
+````
 {: file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp"}
 
 Following the command **PlayInViewport**, it's easy to find out that this commands is mapping with callback in the same file. 
 
-```C++
+````C++
 ... line: 421
 	ActionList.MapAction(Commands.PlayInViewport,
 		FExecuteAction::CreateStatic(&FInternalPlayWorldCommandCallbacks::PlayInViewport_Clicked),
@@ -37,12 +37,12 @@ Following the command **PlayInViewport**, it's easy to find out that this comman
 		FIsActionButtonVisible::CreateStatic(&FInternalPlayWorldCommandCallbacks::CanShowNonPlayWorldOnlyActions)
 	);
 ...
-```
+````
 {: file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp"}
 
 As the mapping logic, when Play button is clicked, the **PlayInViewport_Clicked** function will be triggered. This function should be the key to start a play session in editor environment.
 
-```C++
+````C++
 ... line: 1765
 void FInternalPlayWorldCommandCallbacks::PlayInViewport_Clicked()
 {
@@ -89,14 +89,14 @@ void FInternalPlayWorldCommandCallbacks::PlayInViewport_Clicked()
 	}
 }
 ...
-```
+````
 {: file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp"}
 
 At the beginning, this function record the current mode in **FEngineAnalytics** for **RepeatLastPlay** (another play mode like **PlayInViewport**) usage. And then, it constructs a *SessionParams* to request a play session from editor instance. For now, it only takes active viewport and start orientation in count.
 
 ## Start Play Session
 In common case, the **RequestPlaySession** function of class **UEditorEngine** class will be invoked.
-```C++
+````C++
 ... line: 825
 void UEditorEngine::RequestPlaySession(const FRequestPlaySessionParams& InParams)
 {
@@ -131,13 +131,13 @@ void UEditorEngine::RequestPlaySession(const FRequestPlaySessionParams& InParams
 	}
 }
 ... 
-```
+````
 {: file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\PlayLevel.cpp"}
 
 According to the code above, this function does some preparations instead of creating play session directly. The major part is duplicating the *EditorPlaySettings* for play session. And the *PlaySessionRequest* will be used in next tick, in the other word, the creation of play session is delayed by one frame.
 
 **Tick** function of **UEditorEngine** will check the *PlaySessionRequest* variable every frame for any play session pending to start.
-```C++
+````C++
 ... line: 1625
 	// Kick off a Play Session request if one was queued up during the last frame.
 	if (PlaySessionRequest.IsSet())
@@ -149,7 +149,7 @@ According to the code above, this function does some preparations instead of cre
 		ToggleBetweenPIEandSIE();
 	}
 ...
-```
+````
 {: file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\EditorEngine.cpp"}
 
 
