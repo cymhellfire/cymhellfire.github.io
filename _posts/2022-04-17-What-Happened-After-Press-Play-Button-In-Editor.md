@@ -19,7 +19,7 @@ _Hover cursor on the Play button_
 
 In RegisterCommands() function of *DebuggerCommands.cpp*, a **UI_Command** named **PlayInViewPort** takes above tooltips. Code like follows:
 
-```C++
+```CPP
  @line:334
 	UI_COMMAND(PlayInViewport, "Selected Viewport", "Play this level in the active level editor viewport", EUserInterfaceActionType::Check, FInputChord());
 ```
@@ -27,7 +27,7 @@ In RegisterCommands() function of *DebuggerCommands.cpp*, a **UI_Command** named
 
 Following the command **PlayInViewport**, it's easy to find out that this commands is mapping with callback in the same file. 
 
-```C++
+```
  @ line: 421
 	ActionList.MapAction(Commands.PlayInViewport,
 		FExecuteAction::CreateStatic(&FInternalPlayWorldCommandCallbacks::PlayInViewport_Clicked),
@@ -40,7 +40,7 @@ Following the command **PlayInViewport**, it's easy to find out that this comman
 
 As the mapping logic, when Play button is clicked, the **PlayInViewport_Clicked** function will be triggered. This function should be the key to start a play session in editor environment.
 
-```C++
+```CPP
  @ line: 1765
 void FInternalPlayWorldCommandCallbacks::PlayInViewport_Clicked()
 {
@@ -93,7 +93,7 @@ At the beginning, this function record the current mode in **FEngineAnalytics** 
 
 ## Start Play Session
 In common case, the **RequestPlaySession** function of class **UEditorEngine** class will be invoked.
-```C++
+```
  @ line: 825
 void UEditorEngine::RequestPlaySession(const FRequestPlaySessionParams& InParams)
 {
@@ -133,7 +133,7 @@ void UEditorEngine::RequestPlaySession(const FRequestPlaySessionParams& InParams
 According to the code above, this function does some preparations instead of creating play session directly. The major part is duplicating the *EditorPlaySettings* for play session. And the *PlaySessionRequest* will be used in next tick, in the other word, the creation of play session is delayed by one frame.
 
 **Tick** function of **UEditorEngine** will check the *PlaySessionRequest* variable every frame for any play session pending to start.
-```C++
+```CPP
  @ line: 1625
 	// Kick off a Play Session request if one was queued up during the last frame.
 	if (PlaySessionRequest.IsSet())
