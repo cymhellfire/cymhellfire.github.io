@@ -3,7 +3,7 @@ title: What Happened after Press Play Button in Editor
 date: 2022-04-17 14:30:00 +0800
 categories: [Unreal Engine, Editor]
 tags: [learning ue]
-img_path: _posts/img/2022-04-17-What-Happened-After-Press-Play-Button-In-Editor/
+img_path: /img/2022-04-17-What-Happened-After-Press-Play-Button-In-Editor/
 ---
 
 This post mainly talk about the underlying logic of Play button in UE Editor.
