@@ -8,7 +8,7 @@ tags: [learning ue, utils]
 TGuardValue[^OfficialDoc] is a helper struct that can ensure a variable restores its previous value when leaving current scope.
 
 ## Implementation
-TGuardValue is simply backup the original value of input variable, and set this value back when destructor execute. 
+TGuardValue simply backup the original value of input variable, and set this value back when its destructor execute. 
 Following shows the source code:
 ```
  @line:279
