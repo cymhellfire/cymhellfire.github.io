@@ -19,7 +19,7 @@ _Hover cursor on the Play button_
 
 In RegisterCommands() function of *DebuggerCommands.cpp*, a **UI_Command** named **PlayInViewPort** takes above tooltips. Code like follows:
 
-```CPP
+```
  @line:334
 	UI_COMMAND(PlayInViewport, "Selected Viewport", "Play this level in the active level editor viewport", EUserInterfaceActionType::Check, FInputChord());
 ```
@@ -40,7 +40,7 @@ Following the command **PlayInViewport**, it's easy to find out that this comman
 
 As the mapping logic, when Play button is clicked, the **PlayInViewport_Clicked** function will be triggered. This function should be the key to start a play session in editor environment.
 
-```CPP
+```
  @ line: 1765
 void FInternalPlayWorldCommandCallbacks::PlayInViewport_Clicked()
 {
@@ -133,7 +133,7 @@ void UEditorEngine::RequestPlaySession(const FRequestPlaySessionParams& InParams
 According to the code above, this function does some preparations instead of creating play session directly. The major part is duplicating the *EditorPlaySettings* for play session. And the *PlaySessionRequest* will be used in next tick, in the other word, the creation of play session is delayed by one frame.
 
 **Tick** function of **UEditorEngine** will check the *PlaySessionRequest* variable every frame for any play session pending to start.
-```CPP
+```
  @ line: 1625
 	// Kick off a Play Session request if one was queued up during the last frame.
 	if (PlaySessionRequest.IsSet())
