@@ -12,7 +12,7 @@ This post mainly talk about the underlying logic of Play button in UE Editor.
 {: .prompt-tip }
 
 ## Underlying Callback Function
-Searching the tooltips of Play button in Editor source code, will lead you to the relative code.
+Searching the tooltips of Play button in Editor source code will lead you to the relative code.
 
 ![Play Button Tooltips](Play-Button-Tooltips.png) {: width="415" height="146" }
 _Hover cursor on the Play button_
@@ -275,7 +275,7 @@ void UEditorEngine::StartQueuedPlaySessionRequest()
 ![Create Instance Callstack](CreateInstance-Callstack.png)
 _Callstack of CreateInnerProcessPIEGameInstance_
 
-> This callstack occurred when *Play in Selected Viewport* and *Play Standalone* set. When play with other settings, the callstack may be different from shown one.
+> This callstack occurred when PIE start with *Selected Viewport* and *Play Standalone* set. When play with other settings, the callstack may be different.
 {: .prompt-tip }
 
 |Function|Main Operations|
