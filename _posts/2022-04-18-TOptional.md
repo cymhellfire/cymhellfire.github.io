@@ -67,60 +67,60 @@ With *TOptional* template, no need to create special instance for every struct t
 
 *TOptional* struct is defined in file \Engine\Source\Runtime\Core\Public\Misc\Optional.h. *TOptional* has lots of different constructors, just take one of them for example.
 ```
-	/** Construct an OptionaType with a valid value. */
-	TOptional(const OptionalType& InValue)
-	{
-		new(&Value) OptionalType(InValue);
-		bIsSet = true;
-	}
+/** Construct an OptionaType with a valid value. */
+TOptional(const OptionalType& InValue)
+{
+	new(&Value) OptionalType(InValue);
+	bIsSet = true;
+}
 ```
 {: file='First Constructor'}
 
 According to the code above, there is a variable named **Value** in *TOptional* struct for storing underlying struct. When construct with a valid value, the constructor will create a new struct instance at the address pointed by **Value** with given value. And set **bIsSet** to true to indicate this *TOptional* instance is meaningful.
 
 ```
-	~TOptional()
+~TOptional()
+{
+	Reset();
+}
+
+...
+
+void Reset()
+{
+	if (bIsSet)
 	{
-		Reset();
+		bIsSet = false;
+
+		// We need a typedef here because VC won't compile the destructor call below if OptionalType itself has a member called OptionalType
+		typedef OptionalType OptionalDestructOptionalType;
+		((OptionalType*)&Value)->OptionalDestructOptionalType::~OptionalDestructOptionalType();
 	}
-
-    ...
-
-    void Reset()
-	{
-		if (bIsSet)
-		{
-			bIsSet = false;
-
-			// We need a typedef here because VC won't compile the destructor call below if OptionalType itself has a member called OptionalType
-			typedef OptionalType OptionalDestructOptionalType;
-			((OptionalType*)&Value)->OptionalDestructOptionalType::~OptionalDestructOptionalType();
-		}
-	}
+}
 ```
 {: file='Destructor'}
 
 In destrutor, *TOptional* invoke *Reset()* function to release the underlying value. As the above code, it call the destrcutor of underlying struct type.
 
 ```
-	/** @return The optional value; undefined when IsSet() returns false. */
-	const OptionalType& GetValue() const { checkf(IsSet(), TEXT("It is an error to call GetValue() on an unset TOptional. Please either check IsSet() or use Get(DefaultValue) instead.")); return *(OptionalType*)&Value; }
-		  OptionalType& GetValue()		 { checkf(IsSet(), TEXT("It is an error to call GetValue() on an unset TOptional. Please either check IsSet() or use Get(DefaultValue) instead.")); return *(OptionalType*)&Value; }
+/** @return The optional value; undefined when IsSet() returns false. */
+const OptionalType& GetValue() const { checkf(IsSet(), TEXT("It is an error to call GetValue() on an unset TOptional. Please either check IsSet() or use Get(DefaultValue) instead.")); return *(OptionalType*)&Value; }
+		OptionalType& GetValue()		 { checkf(IsSet(), TEXT("It is an error to call GetValue() on an unset TOptional. Please either check IsSet() or use Get(DefaultValue) instead.")); return *(OptionalType*)&Value; }
 ```
 {: file='Getter Function'}
 
 The getter function will check **bIsSet** variable internal. It will fail to pass the check if no valid value has been set.
 
 ```
-	/** @return The optional value when set; DefaultValue otherwise. */
-	const OptionalType& Get(const OptionalType& DefaultValue) const { return IsSet() ? *(OptionalType*)&Value : DefaultValue; }
+/** @return The optional value when set; DefaultValue otherwise. */
+const OptionalType& Get(const OptionalType& DefaultValue) const { return IsSet() ? *(OptionalType*)&Value : DefaultValue; }
 ```
 {: file='Get with Fallback'}
 
 *TOptional* also provides a variant getter with default value as fallback. When no valid value set, it will return the passed in default value.
 
 ```
-	TTypeCompatibleBytes<OptionalType> Value;
+TTypeCompatibleBytes<OptionalType> Value;
 ```
 {: file='Data Storage'}
 
