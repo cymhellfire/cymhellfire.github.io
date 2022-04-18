@@ -42,7 +42,7 @@ void ATestActor::BeginPlay()
 ```
 {: file='Access Variable without Assignment'}
 
-[!Exception without Checking](Exception-Access-No-Check.png)
+![Exception without Checking](Exception-Access-No-Check.png)
 _Exception thrown when accessing_
 
 To avoid the situation above, check the return value of *IsSet()* function before access the value.
