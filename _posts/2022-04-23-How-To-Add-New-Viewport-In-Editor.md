@@ -9,7 +9,7 @@ img_path: /img/2022-04-23-How-To-Add-New-Viewport-In-Editor/
 This article will introduce how to add a customized viewport of current level in Unreal Editor.
 
 > All content are based on Unreal Engine 4.27.2 (binary version from Epic Game Launcher). Other version may have some different in source code.
-{: .prompt-tips}
+{: .prompt-tip}
 
 ## How is Editor Viewport Rendered?
 Before creating new viewport, let's have a look at the existing viewports and figure out how they are rendered. This part helps to get the idea of which classes are needed when implementing customize viewport.
@@ -128,7 +128,7 @@ FSlateViewportClient::FSlateViewportClient(const TSharedPtr<SSlateViewport>& InS
 
 Actually this class doesn't do anything except convert passed in **SSlateViewport** instance to **SEditorViewport**.
 > This client can be extended with customization functions.
-{: prompt-tips}
+{: .prompt-tip}
 
 ### Create Editor Viewport
 The other class should dervide from **SEditorViewport** class. Add new files and following codes.
