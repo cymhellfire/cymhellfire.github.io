@@ -8,7 +8,7 @@ img_path: /img/2022-04-23-How-To-Add-New-Viewport-In-Editor/
 
 This article will introduce how to add a customized viewport of current level in Unreal Editor.
 
-> All content are based on Unreal Engine 4.27.2 (binary version from Epic Game Launcher). Other version may have some different in source code.
+> All content are based on Unreal Engine 4.27.2 (binary version from Epic Game Launcher). Other version may have some differences in source code.
 {: .prompt-tip}
 
 ## How is Editor Viewport Rendered?
@@ -90,7 +90,7 @@ First, open up the *Plugins* tab. Click the *New Plugin* button at the right but
 ![UE-Plugin-Tab](UE-Plugins-Tab.png)
 _Plugins Tab_
 
-In new opened window, select the *Editor Standalone Window* template and fill in the new plugin new. Then click the *Create Plugin* button and wait until progress finished.
+In new opened window, select the *Editor Standalone Window* template and fill in the new plugin name. Then click the *Create Plugin* button and wait until progress bar finished.
 ![UE-New-Plugin](UE-New-Plugin-Dialog.png)
 _New Plugin Dialog_
 
@@ -99,7 +99,7 @@ After the code compiled, you can find the button for open new window in *Window*
 _Open Window Button_
 
 ### Create Editor Viewport Client
-As mentioned before, we need a new class dervided from **FEditorViewportClient**. Add new header and source file and type following code.
+As mentioned before, we need a new class dervided from **FEditorViewportClient**. Add new header and source file and type in following code.
 ```
 #pragma once
 
@@ -127,7 +127,7 @@ FSlateViewportClient::FSlateViewportClient(const TSharedPtr<SSlateViewport>& InS
 {: file='SlateViewportClient.cpp'}
 
 Actually this class doesn't do anything except convert passed in **SSlateViewport** instance to **SEditorViewport**.
-> This client can be extended with customization functions.
+> This client can be extended for any other purposes, but just leave it empty for now.
 {: .prompt-tip}
 
 ### Create Editor Viewport
