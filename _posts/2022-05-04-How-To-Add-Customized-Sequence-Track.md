@@ -2,7 +2,7 @@
 title: How to Add Customized Sequence Track
 date: 2022-05-04 14:41:02 +0800
 categories: [Unreal Engine, Editor]
-tags: [how to]
+tags: [how to][Sequencer]
 img_path: /img/2022-05-04-How-To-Add-Customized-Sequence-Track/
 ---
 
@@ -467,3 +467,447 @@ void FCustomizeTrackEditorModule::ShutdownModule()
 {: file='CustomizeTrackEditor.cpp'}
 
 Save and compile, the new track should be available in *Sequencer* window.
+
+## Add New Event Track
+Previous chapter described how to add a section formed track, this one will talk about the event track. Unlike the section tracks, event track usually has only one infinite length section. All the activated events are located on the section area. Its mechanism is also different, before actual adding new track, let's check the new involved classes for making event track works.
+
+### New Involved Classes
+Here is a UML diagram includes necessary classes for event track.
+
+![UE-Sequencer-Event-Track-UML](UE-Sequencer-Event-Track-UML.jpg)
+_Event Track UML_
+
+> All other classes shown before is hidden in this UML. All classes use actual name in sample code.
+{: .prompt-tip}
+
+The middle part is very similiar to section track UML diagram. Here introduce new invovled classes one by one:
+- New section class need implemented **IMovieSceneEntityProvider** interface which provides ability to generate triggerable event entities.
+- **FMovieSceneNewEventChannel** derived from **FMovieSceneChannel** class. It manipulates time and data struct of all created events. 
+- **UMovieSceneNewEventSystem** is the logic executor class. It's triggered during evaluation and run the event logic once the time matches.
+- **FMovieSceneNewEventTriggerData** is the actual data used when event is triggered. The instances are created by *ImportEntityImpl* function of **UMovieSceneNewEventTriggerSection** class and sent to **UMovieSceneNewEventSystem** class for later triggering. The difference between it and **FMovieSceneNewEvent** is that this struct also contains evaluation relevant data like the time point of trigger.
+
+### Runtime Module
+#### UMovieSceneNewEventTrack
+The track class is every similiar to section track's one. Only thing to do is change the support type to correspongding classes.
+
+#### UMovieSceneNewEventTriggerSection
+The section class need to turn on infinite range support since the event section always covers the hold track to ensure all events are available. Implementing **IMovieSceneEntityProvider** interface is also a must done work.
+
+```
+UCLASS()
+class CUSTOMIZETRACK_API UMovieSceneNewEventTriggerSection : public UMovieSceneSection
+	, public IMovieSceneEntityProvider
+{
+	GENERATED_BODY()
+public:
+
+	UMovieSceneNewEventTriggerSection();
+
+	// IMovieSceneEntityProvider
+	virtual bool PopulateEvaluationFieldImpl(const TRange<FFrameNumber>& EffectiveRange, const FMovieSceneEvaluationFieldEntityMetaData& InMetaData, FMovieSceneEntityComponentFieldBuilder* OutFieldBuilder) override;
+	virtual void ImportEntityImpl(UMovieSceneEntitySystemLinker* EntityLinker, const FEntityImportParams& Params, FImportedEntity* OutImportedEntity) override;
+
+	UPROPERTY()
+	FMovieSceneNewEventChannel EventChannel;
+};
+```
+{: file='MovieSceneNewEventTriggerSection.h'}
+
+```
+UMovieSceneNewEventTriggerSection::UMovieSceneNewEventTriggerSection()
+{
+	bSupportsInfiniteRange = true;
+	SetRange(TRange<FFrameNumber>::All());
+
+#if WITH_EDITOR
+	ChannelProxy = MakeShared<FMovieSceneChannelProxy>(EventChannel, FMovieSceneChannelMetaData());
+#endif
+}
+
+bool UMovieSceneNewEventTriggerSection::PopulateEvaluationFieldImpl(const TRange<FFrameNumber>& EffectiveRange, 
+	const FMovieSceneEvaluationFieldEntityMetaData& InMetaData, FMovieSceneEntityComponentFieldBuilder* OutFieldBuilder)
+{
+	const int32 MetaDataIndex = OutFieldBuilder->AddMetaData(InMetaData);
+
+	TArrayView<const FFrameNumber> Times = EventChannel.GetData().GetTimes();
+	for (int32 Index = 0; Index < Times.Num(); ++Index)
+	{
+		if (EffectiveRange.Contains(Times[Index]))
+		{
+			TRange<FFrameNumber> Range(Times[Index]);
+			OutFieldBuilder->AddOneShotEntity(Range, this, Index, MetaDataIndex);
+		}
+	}
+
+	return true;
+}
+
+void UMovieSceneNewEventTriggerSection::ImportEntityImpl(UMovieSceneEntitySystemLinker* EntityLinker,
+	const FEntityImportParams& Params, FImportedEntity* OutImportedEntity)
+{
+	using namespace UE::MovieScene;
+
+	const int32 EventIndex = static_cast<int32>(Params.EntityID);
+
+	TArrayView<const FFrameNumber> Times = EventChannel.GetData().GetTimes();
+	TArrayView<const FMovieSceneNewEvent> Events = EventChannel.GetData().GetValues();
+	if (!ensureMsgf(Events.IsValidIndex(EventIndex), TEXT("Attempting to import an event entity for an invalid index (Index: %d, Num: %d)"), EventIndex, Events.Num()))
+	{
+		return;
+	}
+
+	if (Events[EventIndex].EventName.IsEmpty())
+	{
+		return;
+	}
+
+	UMovieSceneNewEventTrack* EventTrack = GetTypedOuter<UMovieSceneNewEventTrack>();
+	const FSequenceInstance& ThisInstance = EntityLinker->GetInstanceRegistry()->GetInstance(Params.Sequence.InstanceHandle);
+	FMovieSceneContext Context = ThisInstance.GetContext();
+
+	if (Context.GetStatus() == EMovieScenePlayerStatus::Stopped || Context.IsSilent())
+	{
+		return;
+	}
+
+	// Get the logic executor system
+	UMovieSceneNewEventSystem* EventSystem = EntityLinker->LinkSystem<UMovieSceneNewEventSystem>();
+
+	FMovieSceneNewEventTriggerData TriggerData = {
+		Events[EventIndex].EventName,
+		Times[EventIndex] * Context.GetSequenceToRootTransform()
+	};
+
+	EventSystem->AddEvent(ThisInstance.GetRootInstanceHandle(), TriggerData);
+
+	// Mimic the structure changing in order to ensure that the instantiation phase runs
+	EntityLinker->EntityManager.MimicStructureChanged();
+}
+```
+{: file='MovieSceneNewEventTriggerSection.cpp'}
+
+- *ImportEntityImpl* function create **FMovieSceneNewEventTriggerData** instances based on event data stores in **FMovieSceneNewEventChannel** class, and push them to **UMovieSceneNewEventSystem** class for evaluation purpose. It will be invoked when any event should be triggered during evaluation.
+- *PopulateEvaluationFieldImpl* function adds existing events to track builder that ensure all events are rendered in *Sequencer* window.
+
+#### UMovieSceneNewEventSystem
+**UMovieSceneNewEventSystem** class takes passed in **FMovieSceneNewEventTriggerData** and execute the actual event logic based on data inside trigger data instances.
+
+```
+class IMovieScenePlayer;
+
+USTRUCT()
+struct FMovieSceneNewEventTriggerData
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString TriggerName;
+
+	FFrameTime RootTime;
+};
+
+UCLASS()
+class CUSTOMIZETRACK_API UMovieSceneNewEventSystem : public UMovieSceneEntitySystem
+{
+	GENERATED_BODY()
+public:
+
+	void AddEvent(UE::MovieScene::FInstanceHandle RootInstance, const FMovieSceneNewEventTriggerData& TriggerData);
+
+	// UMovieSceneEntitySystem interface
+	virtual void OnRun(FSystemTaskPrerequisites& InPrerequisites, FSystemSubsequentTasks& Subsequents) override;
+	virtual bool IsRelevantImpl(UMovieSceneEntitySystemLinker* InLinker) const override;
+
+protected:
+
+	bool HasEvents() const;
+	void TriggerAllEvents();
+
+private:
+
+	static void TriggerEvents(TArrayView<const FMovieSceneNewEventTriggerData> Events, IMovieScenePlayer* Player);
+
+private:
+	TMap<UE::MovieScene::FInstanceHandle, TArray<FMovieSceneNewEventTriggerData>> EventsByRoot;
+};
+```
+{: file='MovieSceneNewEventSystem.h'}
+
+```
+DECLARE_CYCLE_STAT(TEXT("NewEvent Systems"), MovieSceneEval_NewEvents, STATGROUP_MovieSceneECS);
+DECLARE_CYCLE_STAT(TEXT("Trigger NewEvents"), MovieSceneEval_TriggerNewEvents, STATGROUP_MovieSceneECS);
+
+bool UMovieSceneNewEventSystem::HasEvents() const
+{
+	return EventsByRoot.Num() > 0;
+}
+
+bool UMovieSceneNewEventSystem::IsRelevantImpl(UMovieSceneEntitySystemLinker* InLinker) const
+{
+	return HasEvents();
+}
+
+void UMovieSceneNewEventSystem::AddEvent(UE::MovieScene::FInstanceHandle RootInstance,
+	const FMovieSceneNewEventTriggerData& TriggerData)
+{
+	check(!TriggerData.TriggerName.IsEmpty());
+	EventsByRoot.FindOrAdd(RootInstance).Add(TriggerData);
+}
+
+void UMovieSceneNewEventSystem::OnRun(FSystemTaskPrerequisites& InPrerequisites, FSystemSubsequentTasks& Subsequents)
+{
+	if (HasEvents())
+	{
+		TriggerAllEvents();
+	}
+}
+
+void UMovieSceneNewEventSystem::TriggerAllEvents()
+{
+	using namespace UE::MovieScene;
+
+	SCOPE_CYCLE_COUNTER(MovieSceneEval_NewEvents);
+
+	FInstanceRegistry* InstanceRegistry = Linker->GetInstanceRegistry();
+	struct FTriggerBatch
+	{
+		TArray<FMovieSceneNewEventTriggerData> TriggerData;
+		IMovieScenePlayer* Player;
+	};
+	TArray<FTriggerBatch> TriggerBatches;
+
+	for (TPair<FInstanceHandle, TArray<FMovieSceneNewEventTriggerData>>& Pair : EventsByRoot)
+	{
+		const FSequenceInstance& RootInstance = InstanceRegistry->GetInstance(Pair.Key);
+
+		if (RootInstance.GetContext().GetDirection() == EPlayDirection::Forwards)
+		{
+			Algo::SortBy(Pair.Value, &FMovieSceneNewEventTriggerData::RootTime);
+		}
+		else
+		{
+			Algo::SortBy(Pair.Value, &FMovieSceneNewEventTriggerData::RootTime, TGreater<>());
+		}
+
+		FTriggerBatch& TriggerBatch = TriggerBatches.Emplace_GetRef();
+		TriggerBatch.TriggerData = Pair.Value;
+		TriggerBatch.Player = RootInstance.GetPlayer();
+	}
+
+	// We need to clean our state before actually triggering the events because one of those events could
+	// call back into an evaluation (for instance, by starting play on another sequence). If we don't clean
+	// this before, would would re-enter and re-trigger past events, resulting in an infinite loop!
+	EventsByRoot.Empty();
+
+	for (const FTriggerBatch& TriggerBatch : TriggerBatches)
+	{
+		TriggerEvents(TriggerBatch.TriggerData, TriggerBatch.Player);
+	}
+}
+
+void UMovieSceneNewEventSystem::TriggerEvents(TArrayView<const FMovieSceneNewEventTriggerData> Events,
+	IMovieScenePlayer* Player)
+{
+	for (const FMovieSceneNewEventTriggerData& Event : Events)
+	{
+		SCOPE_CYCLE_COUNTER(MovieSceneEval_TriggerNewEvents);
+
+		UE_LOG(LogTemp, Log, TEXT("[NewEvent] %s"), *Event.TriggerName);
+	}
+}
+```
+{: file='MovieSceneNewEventSystem.cpp'}
+
+- *IsRelevantImpl* function decides whether this system is available when try to access it by **EntityLinker**.
+- *OnRun* is the function contains need logic to execute events.
+In this case, the system only print a log when event is triggered.
+
+#### FMovieSceneNewEventChannel
+**FMovieSceneNewEventChannel** manipulates all event data for parent section.
+
+```
+USTRUCT()
+struct CUSTOMIZETRACK_API FMovieSceneNewEventChannel : public FMovieSceneChannel
+{
+	GENERATED_BODY()
+
+	FORCEINLINE TMovieSceneChannelData<FMovieSceneNewEvent> GetData()
+	{
+		return TMovieSceneChannelData<FMovieSceneNewEvent>(&KeyTimes, &KeyValues, &KeyHandles);
+	}
+
+	/**
+	 * Constant version of GetData()
+	 */
+	FORCEINLINE TMovieSceneChannelData<const FMovieSceneNewEvent> GetData() const
+	{
+		return TMovieSceneChannelData<const FMovieSceneNewEvent>(&KeyTimes, &KeyValues);
+	}
+
+	FORCEINLINE TArrayView<const FFrameNumber> GetTimes() const
+	{
+		return KeyTimes;
+	}
+
+	FORCEINLINE TArrayView<const FMovieSceneNewEvent> GetValues() const
+	{
+		return KeyValues;
+	}
+
+	// FMovieSceneChannel interface
+	virtual void GetKeys(const TRange<FFrameNumber>&
+		WithinRange, TArray<FFrameNumber>* OutKeyTimes, TArray<FKeyHandle>* OutKeyHandles) override;
+	virtual void GetKeyTimes(TArrayView<const FKeyHandle> InHandles, TArrayView<FFrameNumber> OutKeyTimes) override;
+	virtual void SetKeyTimes(TArrayView<const FKeyHandle> InHandles, TArrayView<const FFrameNumber> InKeyTimes) override;
+	virtual void DuplicateKeys(TArrayView<const FKeyHandle> InHandles, TArrayView<FKeyHandle> OutNewHandles) override;
+	virtual void DeleteKeys(TArrayView<const FKeyHandle> InHandles) override;
+	virtual void DeleteKeysFrom(FFrameNumber InTime, bool bDeleteKeysBefore) override;
+	virtual void ChangeFrameResolution(FFrameRate SourceRate, FFrameRate DestinationRate) override;
+	virtual TRange<FFrameNumber> ComputeEffectiveRange() const override;
+	virtual int32 GetNumKeys() const override;
+	virtual void Reset() override;
+	virtual void Offset(FFrameNumber DeltaPosition) override;
+
+private:
+	UPROPERTY(meta=(KeyTimes))
+	TArray<FFrameNumber> KeyTimes;
+
+	UPROPERTY(meta=(KeyValues))
+	TArray<FMovieSceneNewEvent> KeyValues;
+
+	FMovieSceneKeyHandleMap KeyHandles;
+};
+
+namespace MovieSceneClipboard
+{
+	template<> inline FName GetKeyTypeName<FMovieSceneNewEvent>()
+	{
+		return "MovieSceneNewEvent";
+	}
+}
+
+template<>
+struct TMovieSceneChannelTraits<FMovieSceneNewEventChannel> : TMovieSceneChannelTraitsBase<FMovieSceneNewEventChannel>
+{
+	enum { SupportsDefaults = false };
+};
+
+inline bool EvaluateChannel(const FMovieSceneNewEventChannel* InChannel, FFrameTime InTime, FMovieSceneNewEvent& OutValue)
+{
+	// Can't evaluate event section data in the typical sense
+	return false;
+}
+```
+{: file='MovieSceneNewEventChannel.h'}
+
+> Notice that some individual functions are also placed here. They are neccessary for register channel interface in editor module later.
+{: .prompt-tip}
+
+```
+void FMovieSceneNewEventChannel::GetKeys(const TRange<FFrameNumber>& WithinRange, TArray<FFrameNumber>* OutKeyTimes,
+	TArray<FKeyHandle>* OutKeyHandles)
+{
+	GetData().GetKeys(WithinRange, OutKeyTimes, OutKeyHandles);
+}
+
+void FMovieSceneNewEventChannel::GetKeyTimes(TArrayView<const FKeyHandle> InHandles,
+	TArrayView<FFrameNumber> OutKeyTimes)
+{
+	GetData().GetKeyTimes(InHandles, OutKeyTimes);
+}
+
+void FMovieSceneNewEventChannel::SetKeyTimes(TArrayView<const FKeyHandle> InHandles,
+	TArrayView<const FFrameNumber> InKeyTimes)
+{
+	GetData().SetKeyTimes(InHandles, InKeyTimes);
+}
+
+void FMovieSceneNewEventChannel::DuplicateKeys(TArrayView<const FKeyHandle> InHandles,
+	TArrayView<FKeyHandle> OutNewHandles)
+{
+	GetData().DuplicateKeys(InHandles, OutNewHandles);
+}
+
+void FMovieSceneNewEventChannel::DeleteKeys(TArrayView<const FKeyHandle> InHandles)
+{
+	GetData().DeleteKeys(InHandles);
+}
+
+void FMovieSceneNewEventChannel::DeleteKeysFrom(FFrameNumber InTime, bool bDeleteKeysBefore)
+{
+	GetData().DeleteKeysFrom(InTime, bDeleteKeysBefore);
+}
+
+void FMovieSceneNewEventChannel::ChangeFrameResolution(FFrameRate SourceRate, FFrameRate DestinationRate)
+{
+	GetData().ChangeFrameResolution(SourceRate, DestinationRate);
+}
+
+TRange<FFrameNumber> FMovieSceneNewEventChannel::ComputeEffectiveRange() const
+{
+	return GetData().GetTotalRange();
+}
+
+int32 FMovieSceneNewEventChannel::GetNumKeys() const
+{
+	return KeyTimes.Num();
+}
+
+void FMovieSceneNewEventChannel::Reset()
+{
+	KeyTimes.Reset();
+	KeyValues.Reset();
+	KeyHandles.Reset();
+}
+
+void FMovieSceneNewEventChannel::Offset(FFrameNumber DeltaPosition)
+{
+	GetData().Offset(DeltaPosition);
+}
+```
+{: file='MovieSceneNewEventChannel.cpp'}
+
+According the source code above, this class is only a wrapper class without actual logic. KeyTimes, KeyValues and KeyHandles are the key variables.
+
+#### FMovieSceneNewEvent
+Finally, here is the event definition struct. A single **FString** variable is enought for this example.
+
+```
+USTRUCT(BlueprintType)
+struct FMovieSceneNewEvent
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, Category="NewEvent")
+	FString EventName;
+};
+
+```
+{: file='MovieSceneNewEvent.h'}
+
+### Editor Module
+For event track, it's necessary to register channel interface for new track. Open module source file and change the *StartupModule()* function like following.
+
+```
+void FCustomizeTrackEditorModule::StartupModule()
+{
+	UE_LOG(LogTemp, Log, TEXT("[CustomizeTrackEditor] Startup"));
+
+	ISequencerModule& SequencerModule = FModuleManager::Get().LoadModuleChecked<ISequencerModule>("Sequencer");
+	// Register new track editor
+	NewTrackCreateEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FNewTrackEditor::CreateTrackEditor));
+	NewEventTrackCreateEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FNewEventTrackEditor::CreateTrackEditor));
+
+	// Register new channel interface
+	SequencerModule.RegisterChannelInterface<FMovieSceneNewEventChannel>();
+}
+```
+{: file='CustomizeTrackEditor.cpp'}
+
+> Ensure that header file **"SequencerChannelInterface.h"** is included. Otherwise project will not be compiled.
+{: .prompt-tip}
+
+The section renderer and editor menu construtor classes can be added like section track's, no more detail about them.
+
+![UE-New-Event-Track](UE-New-Event-Track.png)
+_New Event Track_
