@@ -2,7 +2,7 @@
 title: How to Add Customized Sequence Track
 date: 2022-05-04 14:41:02 +0800
 categories: [Unreal Engine, Editor]
-tags: [how to][Sequencer]
+tags: [how to, sequencer]
 img_path: /img/2022-05-04-How-To-Add-Customized-Sequence-Track/
 ---
 
@@ -911,3 +911,6 @@ The section renderer and editor menu construtor classes can be added like sectio
 
 ![UE-New-Event-Track](UE-New-Event-Track.png)
 _New Event Track_
+
+## Example Code
+The example project shows in this article can be found [**here**](https://github.com/cymhellfire/Blogging/tree/main/Plugins/CustomizeTrack).
