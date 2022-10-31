@@ -15,7 +15,7 @@ _Corrupted Repository_
 
 It clearly shows that there are some unresolved conflicts existing, and no commit history shows in the center area. Click the 'Resolve' button can open resolve dialog, but there is no conflict listed out.
 
-![Resolve-Conflict-Dialog](Resolve-Conflict-Dialog.png)
+![Resolve-Conflict-Dialog](Resovle-Conflict-Dialog.png)
 _Resolve Dialog_
 
 ## How to Solve It
