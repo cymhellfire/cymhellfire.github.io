@@ -1,0 +1,417 @@
+<!DOCTYPE html><html lang="en" ><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="generator" content="Jekyll v4.3.1" /><meta property="og:title" content="What Happened after Press Play Button in Editor" /><meta property="og:locale" content="en" /><meta name="description" content="This post mainly talk about the underlying logic of Play button in UE Editor." /><meta property="og:description" content="This post mainly talk about the underlying logic of Play button in UE Editor." /><link rel="canonical" href="https://cymhellfire.github.io/posts/What-Happened-After-Press-Play-Button-In-Editor/" /><meta property="og:url" content="https://cymhellfire.github.io/posts/What-Happened-After-Press-Play-Button-In-Editor/" /><meta property="og:site_name" content="Vault" /><meta property="og:type" content="article" /><meta property="article:published_time" content="2022-04-17T14:30:00+08:00" /><meta name="twitter:card" content="summary" /><meta property="twitter:title" content="What Happened after Press Play Button in Editor" /><meta name="twitter:site" content="@" /> <script type="application/ld+json"> {"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-04-19T00:13:21+08:00","datePublished":"2022-04-17T14:30:00+08:00","description":"This post mainly talk about the underlying logic of Play button in UE Editor.","headline":"What Happened after Press Play Button in Editor","mainEntityOfPage":{"@type":"WebPage","@id":"https://cymhellfire.github.io/posts/What-Happened-After-Press-Play-Button-In-Editor/"},"url":"https://cymhellfire.github.io/posts/What-Happened-After-Press-Play-Button-In-Editor/"}</script><title>What Happened after Press Play Button in Editor | Vault</title><link rel="apple-touch-icon" sizes="180x180" href="/assets/img/favicons/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicons/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicons/favicon-16x16.png"><link rel="manifest" href="/assets/img/favicons/site.webmanifest"><link rel="shortcut icon" href="/assets/img/favicons/favicon.ico"><meta name="apple-mobile-web-app-title" content="Vault"><meta name="application-name" content="Vault"><meta name="msapplication-TileColor" content="#da532c"><meta name="msapplication-config" content="/assets/img/favicons/browserconfig.xml"><meta name="theme-color" content="#ffffff"><link rel="preconnect" href="https://fonts.googleapis.com" ><link rel="dns-prefetch" href="https://fonts.googleapis.com" ><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com" ><link rel="dns-prefetch" href="https://fonts.googleapis.com" ><link rel="preconnect" href="https://cdn.jsdelivr.net" ><link rel="dns-prefetch" href="https://cdn.jsdelivr.net" ><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato&family=Source+Sans+Pro:wght@400;600;700;900&display=swap"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/css/bootstrap.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.11.2/css/all.min.css"><link rel="stylesheet" href="/assets/css/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/magnific-popup@1/dist/magnific-popup.min.css"> <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script> <script type="text/javascript"> class ModeToggle { static get MODE_KEY() { return "mode"; } static get MODE_ATTR() { return "data-mode"; } static get DARK_MODE() { return "dark"; } static get LIGHT_MODE() { return "light"; } static get ID() { return "mode-toggle"; } constructor() { if (this.hasMode) { if (this.isDarkMode) { if (!this.isSysDarkPrefer) { this.setDark(); } } else { if (this.isSysDarkPrefer) { this.setLight(); } } } let self = this; /* always follow the system prefers */ this.sysDarkPrefers.addEventListener("change", () => { if (self.hasMode) { if (self.isDarkMode) { if (!self.isSysDarkPrefer) { self.setDark(); } } else { if (self.isSysDarkPrefer) { self.setLight(); } } self.clearMode(); } self.notify(); }); } /* constructor() */ get sysDarkPrefers() { return window.matchMedia("(prefers-color-scheme: dark)"); } get isSysDarkPrefer() { return this.sysDarkPrefers.matches; } get isDarkMode() { return this.mode === ModeToggle.DARK_MODE; } get isLightMode() { return this.mode === ModeToggle.LIGHT_MODE; } get hasMode() { return this.mode != null; } get mode() { return sessionStorage.getItem(ModeToggle.MODE_KEY); } /* get the current mode on screen */ get modeStatus() { if (this.isDarkMode || (!this.hasMode && this.isSysDarkPrefer)) { return ModeToggle.DARK_MODE; } else { return ModeToggle.LIGHT_MODE; } } setDark() { $('html').attr(ModeToggle.MODE_ATTR, ModeToggle.DARK_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.DARK_MODE); } setLight() { $('html').attr(ModeToggle.MODE_ATTR, ModeToggle.LIGHT_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.LIGHT_MODE); } clearMode() { $('html').removeAttr(ModeToggle.MODE_ATTR); sessionStorage.removeItem(ModeToggle.MODE_KEY); } /* Notify another plugins that the theme mode has changed */ notify() { window.postMessage({ direction: ModeToggle.ID, message: this.modeStatus }, "*"); } } /* ModeToggle */ const toggle = new ModeToggle(); function flipMode() { if (toggle.hasMode) { if (toggle.isSysDarkPrefer) { if (toggle.isLightMode) { toggle.clearMode(); } else { toggle.setLight(); } } else { if (toggle.isDarkMode) { toggle.clearMode(); } else { toggle.setDark(); } } } else { if (toggle.isSysDarkPrefer) { toggle.setLight(); } else { toggle.setDark(); } } toggle.notify(); } /* flipMode() */ </script><body data-spy="scroll" data-target="#toc" data-topbar-visible="true"><div id="sidebar" class="d-flex flex-column align-items-end"><div class="profile-wrapper text-center"><div id="avatar"> <a href="/" class="mx-auto"> </a></div><div class="site-title"> <a href="/">Vault</a></div><div class="site-subtitle font-italic">Learning, thinking, sharing.</div></div><ul class="w-100"><li class="nav-item"> <a href="/" class="nav-link"> <i class="fa-fw fas fa-home ml-xl-3 mr-xl-3 unloaded"></i> <span>HOME</span> </a><li class="nav-item"> <a href="/categories/" class="nav-link"> <i class="fa-fw fas fa-stream ml-xl-3 mr-xl-3 unloaded"></i> <span>CATEGORIES</span> </a><li class="nav-item"> <a href="/tags/" class="nav-link"> <i class="fa-fw fas fa-tag ml-xl-3 mr-xl-3 unloaded"></i> <span>TAGS</span> </a><li class="nav-item"> <a href="/archives/" class="nav-link"> <i class="fa-fw fas fa-archive ml-xl-3 mr-xl-3 unloaded"></i> <span>ARCHIVES</span> </a><li class="nav-item"> <a href="/about/" class="nav-link"> <i class="fa-fw fas fa-info-circle ml-xl-3 mr-xl-3 unloaded"></i> <span>ABOUT</span> </a></ul><div class="sidebar-bottom mt-auto d-flex flex-wrap justify-content-center align-items-center"> <button class="mode-toggle btn" aria-label="Switch Mode"> <i class="fas fa-adjust"></i> </button> <span class="icon-border"></span> <a href="https://github.com/cymhellfire" aria-label="github" target="_blank" rel="noopener"> <i class="fab fa-github"></i> </a> <a href="https://twitter.com/" aria-label="twitter" target="_blank" rel="noopener"> <i class="fab fa-twitter"></i> </a> <a href=" javascript:location.href = 'mailto:' + ['cym-hellfire','qq.com'].join('@')" aria-label="email" > <i class="fas fa-envelope"></i> </a> <a href="/feed.xml" aria-label="rss" > <i class="fas fa-rss"></i> </a></div></div><div id="topbar-wrapper"><div id="topbar" class="container d-flex align-items-center justify-content-between h-100 pl-3 pr-3 pl-md-4 pr-md-4"> <span id="breadcrumb"> <span> <a href="/"> Home </a> </span> <span>What Happened after Press Play Button in Editor</span> </span> <i id="sidebar-trigger" class="fas fa-bars fa-fw"></i><div id="topbar-title"> Post</div><i id="search-trigger" class="fas fa-search fa-fw"></i> <span id="search-wrapper" class="align-items-center"> <i class="fas fa-search fa-fw"></i> <input class="form-control" id="search-input" type="search" aria-label="search" autocomplete="off" placeholder="Search..."> </span> <span id="search-cancel" >Cancel</span></div></div><div id="main-wrapper" class="d-flex justify-content-center"><div id="main" class="container pl-xl-4 pr-xl-4"><div class="row"><div id="core-wrapper" class="col-12 col-lg-11 col-xl-9 pr-xl-4"><div class="post pl-1 pr-1 pl-md-2 pr-md-2"><h1 data-toc-skip>What Happened after Press Play Button in Editor</h1><div class="post-meta text-muted"> <span> Posted <em class="" data-ts="1650177000" data-df="ll" data-toggle="tooltip" data-placement="bottom"> Apr 17, 2022 </em> </span> <span> Updated <em class="" data-ts="1650298401" data-df="ll" data-toggle="tooltip" data-placement="bottom"> Apr 19, 2022 </em> </span><div class="d-flex justify-content-between"> <span> By <em> <a href="https://github.com/cymhellfire">alexymcai</a> </em> </span><div> <span class="readtime" data-toggle="tooltip" data-placement="bottom" title="1530 words"> <em>8 min</em> read</span></div></div></div><div class="post-content"><p>This post mainly talk about the underlying logic of Play button in UE Editor.</p><blockquote class="prompt-tip"><div><p>All content of this post is based on Unreal Engine 4.27.2 (Binary version from Epic Launcher).</p></div></blockquote><h2 id="underlying-callback-function"><span class="mr-2">Underlying Callback Function</span><a href="#underlying-callback-function" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>Searching the tooltips of Play button in Editor source code will lead you to the relative code.</p><p><img data-src="/img/2022-04-17-What-Happened-After-Press-Play-Button-In-Editor/Play-Button-Tooltips.png" alt="Play Button Tooltips" data-proofer-ignore> {: width=”415” height=”146” } <em>Hover cursor on the Play button</em></p><p>In <strong>RegisterCommands()</strong> function of <em>DebuggerCommands.cpp</em>, a <strong>UI_Command</strong> named <strong>PlayInViewPort</strong> takes above tooltips.</p><div file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp" class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp"><i class="far fa-file-code"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre> @line:334
+	UI_COMMAND(PlayInViewport, "Selected Viewport", "Play this level in the active level editor viewport", EUserInterfaceActionType::Check, FInputChord());
+</pre></table></code></div></div><p>Following the command <strong>PlayInViewport</strong>, it’s easy to find out that this commands is mapping with callback functions in the same file.</p><div file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp" class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp"><i class="far fa-file-code"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+</pre><td class="rouge-code"><pre> @ line: 421
+	ActionList.MapAction(Commands.PlayInViewport,
+		FExecuteAction::CreateStatic(&amp;FInternalPlayWorldCommandCallbacks::PlayInViewport_Clicked),
+		FCanExecuteAction::CreateStatic(&amp;FInternalPlayWorldCommandCallbacks::PlayInViewport_CanExecute),
+		FIsActionChecked::CreateStatic(&amp;FInternalPlayWorldCommandCallbacks::PlayInModeIsChecked, PlayMode_InViewPort),
+		FIsActionButtonVisible::CreateStatic(&amp;FInternalPlayWorldCommandCallbacks::CanShowNonPlayWorldOnlyActions)
+	);
+</pre></table></code></div></div><p>As the mapping logic, when Play button is clicked, the <strong>PlayInViewport_Clicked</strong> function will be triggered. This function should be the key to start a play session in editor environment.</p><div file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp" class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\Kismet2\DebuggerCommands.cpp"><i class="far fa-file-code"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+</pre><td class="rouge-code"><pre> @ line: 1765
+void FInternalPlayWorldCommandCallbacks::PlayInViewport_Clicked()
+{
+	FLevelEditorModule&amp; LevelEditorModule = FModuleManager::GetModuleChecked&lt;FLevelEditorModule&gt;(TEXT("LevelEditor"));
+
+	/** Set PlayInViewPort as the last executed play command */
+	const FPlayWorldCommands&amp; Commands = FPlayWorldCommands::Get();
+
+	SetLastExecutedPlayMode(PlayMode_InViewPort);
+
+	RecordLastExecutedPlayMode();
+
+	TSharedPtr&lt;IAssetViewport&gt; ActiveLevelViewport = LevelEditorModule.GetFirstActiveViewport();
+
+	const bool bAtPlayerStart = (GetPlayModeLocation() == PlayLocation_DefaultPlayerStart);
+
+	FRequestPlaySessionParams SessionParams;
+
+	// Make sure we can find a path to the view port.  This will fail in cases where the view port widget
+	// is in a backgrounded tab, etc.  We can't currently support starting PIE in a backgrounded tab
+	// due to how PIE manages focus and requires event forwarding from the application.
+	if (ActiveLevelViewport.IsValid() &amp;&amp; FSlateApplication::Get().FindWidgetWindow(ActiveLevelViewport-&gt;AsWidget()).IsValid())
+	{
+		SessionParams.DestinationSlateViewport = ActiveLevelViewport;
+		if (!bAtPlayerStart)
+		{
+			// Start the player where the camera is if not forcing from player start
+			SessionParams.StartLocation = ActiveLevelViewport-&gt;GetAssetViewportClient().GetViewLocation();
+			SessionParams.StartRotation = ActiveLevelViewport-&gt;GetAssetViewportClient().GetViewRotation();
+		}
+	}
+
+	if (!HasPlayWorld())
+	{
+		// If there is an active level view port, play the game in it, otherwise make a new window.
+		GUnrealEd-&gt;RequestPlaySession(SessionParams);
+	}
+	else
+	{
+		// There is already a play world active which means simulate in editor is happening
+		// Toggle to PIE
+		check(!GIsPlayInEditorWorld);
+		GUnrealEd-&gt;RequestToggleBetweenPIEandSIE();
+	}
+}
+</pre></table></code></div></div><p>At the beginning, this function record the current mode in <strong>FEngineAnalytics</strong> for <strong>RepeatLastPlay</strong> (another play mode like <strong>PlayInViewport</strong>) usage. And then, it constructs a <em>SessionParams</em> to request a play session from editor instance. For now, it only takes active viewport and start orientation in count.</p><h2 id="start-play-session"><span class="mr-2">Start Play Session</span><a href="#start-play-session" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>In common case, the <strong>RequestPlaySession</strong> function of class <strong>UEditorEngine</strong> class will be invoked.</p><div file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\PlayLevel.cpp" class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\PlayLevel.cpp"><i class="far fa-file-code"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+</pre><td class="rouge-code"><pre> @ line: 825
+void UEditorEngine::RequestPlaySession(const FRequestPlaySessionParams&amp; InParams)
+{
+	// Store our Request to be operated on next Tick.
+	PlaySessionRequest = InParams;
+
+	// If they don't want to use a specific set of Editor Play Settings, fall back to the CDO.
+	if (!PlaySessionRequest-&gt;EditorPlaySettings)
+	{
+		PlaySessionRequest-&gt;EditorPlaySettings = GetMutableDefault&lt;ULevelEditorPlaySettings&gt;();
+	}
+
+	// Now we duplicate their Editor Play Settings so that we can mutate it as part of startup
+	// to help rule out invalid configuration combinations.
+	FObjectDuplicationParameters DuplicationParams(PlaySessionRequest-&gt;EditorPlaySettings, GetTransientPackage());
+	// Kept alive by AddReferencedObjects
+	PlaySessionRequest-&gt;EditorPlaySettings = CastChecked&lt;ULevelEditorPlaySettings&gt;(StaticDuplicateObjectEx(DuplicationParams));
+
+
+	// ToDo: Allow the CDO for the Game Instance to modify the settings after we copy them
+	// so that they can validate user settings before attempting a launch.
+
+	// Play Sessions can use the Game Mode to determine the default Player Start position
+	// or the start position can be overridden by the incoming launch arguments
+	PRAGMA_DISABLE_DEPRECATION_WARNINGS
+	GIsPIEUsingPlayerStart = !InParams.StartLocation.IsSet();
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+	if (InParams.SessionDestination == EPlaySessionDestinationType::Launcher)
+	{
+		check(InParams.LauncherTargetDevice.IsSet());
+	}
+}
+</pre></table></code></div></div><p>According to the code above, this function does some preparations instead of creating play session directly. The major part is duplicating the <em>EditorPlaySettings</em> for play session. And the <em>PlaySessionRequest</em> will be used in next tick, in the other word, the creation of play session is delayed by one frame.</p><p><strong>Tick</strong> function of <strong>UEditorEngine</strong> will check the <em>PlaySessionRequest</em> variable every frame for any play session pending to start.</p><div file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\EditorEngine.cpp" class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\EditorEngine.cpp"><i class="far fa-file-code"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+</pre><td class="rouge-code"><pre> @ line: 1625
+	// Kick off a Play Session request if one was queued up during the last frame.
+	if (PlaySessionRequest.IsSet())
+	{
+		StartQueuedPlaySessionRequest();
+	}
+	else if( bIsToggleBetweenPIEandSIEQueued )
+	{
+		ToggleBetweenPIEandSIE();
+	}
+</pre></table></code></div></div><p>Function <strong>StartQueuedPlaySessionRequest</strong> is pretty simple, it invoke <strong>StartQueuedPlaySessionRequestImpl</strong> and clear the <em>PlaySessionRequest</em> value to avoid create play session repeatly.</p><div file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\PlayLevel.cpp" class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\PlayLevel.cpp"><i class="far fa-file-code"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+</pre><td class="rouge-code"><pre> @ line: 1007
+void UEditorEngine::StartQueuedPlaySessionRequest()
+{
+	if (!PlaySessionRequest.IsSet())
+	{
+		UE_LOG(LogPlayLevel, Warning, TEXT("StartQueuedPlaySessionRequest() called whith no request queued. Ignoring..."));
+		return;
+	}
+
+	StartQueuedPlaySessionRequestImpl();
+
+	// Ensure the request is always reset after an attempt (which may fail)
+	// so that we don't get stuck in an infinite loop of start attempts.
+	PlaySessionRequest.Reset();
+}
+</pre></table></code></div></div><p><strong>StartQueuedPlaySessionRequestImpl</strong> function gathering neccessary information for variable <em>PlayInEditorSessionInfo</em> and decide whether the new session run in a separate process. And finally invoke corresponding function based on <em>SessionDestination</em> set in <em>PlaySessionRequest</em>.</p><div file="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\PlayLevel.cpp" class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="\UE_4.27\Engine\Source\Editor\UnrealEd\Private\PlayLevel.cpp"><i class="far fa-file-code"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+</pre><td class="rouge-code"><pre> @ line: 1022
+ void UEditorEngine::StartQueuedPlaySessionRequestImpl()
+{
+	if (!ensureAlwaysMsgf(PlaySessionRequest.IsSet(), TEXT("StartQueuedPlaySessionRequest should not be called without a request set!")))
+	{
+		return;
+	}
+
+	// End any previous sessions running in separate processes.
+	EndPlayOnLocalPc();
+
+	// If there's level already being played, close it. (This may change GWorld). 
+	if (PlayWorld &amp;&amp; PlaySessionRequest-&gt;SessionDestination == EPlaySessionDestinationType::InProcess)
+	{
+		// Cache our Play Session Request, as EndPlayMap will clear it. When this function exits the request will be reset anyways.
+		FRequestPlaySessionParams OriginalRequest = PlaySessionRequest.GetValue();
+		// Immediately end the current play world.
+		EndPlayMap(); 
+		// Restore the request as we're now processing it.
+		PlaySessionRequest = OriginalRequest;
+	}
+
+	// We want to use the ULevelEditorPlaySettings that come from the Play Session Request.
+	// By the time this function gets called, these settings are a copy of either the CDO, 
+	// or a user provided instance. The settings may have been modified by the game instance
+	// after the request was made, to allow game instances to pre-validate settings.
+	const ULevelEditorPlaySettings* EditorPlaySettings = PlaySessionRequest-&gt;EditorPlaySettings;
+	check(EditorPlaySettings);
+
+	PlayInEditorSessionInfo = FPlayInEditorSessionInfo();
+	PlayInEditorSessionInfo-&gt;PlayRequestStartTime = FPlatformTime::Seconds();
+	PlayInEditorSessionInfo-&gt;PlayRequestStartTime_StudioAnalytics = FStudioAnalytics::GetAnalyticSeconds();
+
+	// Keep a copy of their original request settings for any late
+	// joiners or async processes that need access to the settings after launch.
+	PlayInEditorSessionInfo-&gt;OriginalRequestParams = PlaySessionRequest.GetValue();
+
+	// Load the saved window positions from the EditorPlaySettings object.
+	for (const FIntPoint&amp; Position : EditorPlaySettings-&gt;MultipleInstancePositions)
+	{
+		FPlayInEditorSessionInfo::FWindowSizeAndPos&amp; NewPos = PlayInEditorSessionInfo-&gt;CachedWindowInfo.Add_GetRef(FPlayInEditorSessionInfo::FWindowSizeAndPos());
+		NewPos.Position = Position;
+	}
+
+	// If our settings require us to launch a separate process in any form, we require the user to save
+	// their content so that when the new process reads the data from disk it will match what we have in-editor.
+	bool bUserWantsInProcess;
+	EditorPlaySettings-&gt;GetRunUnderOneProcess(bUserWantsInProcess);
+
+	bool bIsSeparateProcess = PlaySessionRequest-&gt;SessionDestination != EPlaySessionDestinationType::InProcess;
+	if (!bUserWantsInProcess)
+	{
+		int32 NumClients;
+		EditorPlaySettings-&gt;GetPlayNumberOfClients(NumClients);
+
+		EPlayNetMode NetMode;
+		EditorPlaySettings-&gt;GetPlayNetMode(NetMode);
+
+		// More than one client will spawn a second process.		
+		bIsSeparateProcess |= NumClients &gt; 1;
+
+		// If they want to run anyone as a client, a dedicated server is started in a separate process.
+		bIsSeparateProcess |= NetMode == EPlayNetMode::PIE_Client;
+	}
+
+	if (bIsSeparateProcess &amp;&amp; !SaveMapsForPlaySession())
+	{
+		// Maps did not save, print a warning
+		FText ErrorMsg = LOCTEXT("PIEWorldSaveFail", "PIE failed because map save was canceled");
+		UE_LOG(LogPlayLevel, Warning, TEXT("%s"), *ErrorMsg.ToString());
+		FMessageLog(NAME_CategoryPIE).Warning(ErrorMsg);
+		FMessageLog(NAME_CategoryPIE).Open();
+		
+		CancelRequestPlaySession();
+		return;
+	}
+
+	// We'll branch primarily based on the Session Destination, because it affects which settings we apply and how.
+	switch (PlaySessionRequest-&gt;SessionDestination)
+	{
+	case EPlaySessionDestinationType::InProcess:
+		// Create one-or-more PIE/SIE sessions inside of the current process.
+		StartPlayInEditorSession(PlaySessionRequest.GetValue());
+		break;
+	case EPlaySessionDestinationType::NewProcess:
+		// Create one-or-more PIE session by launching a new process on the local machine.
+		StartPlayInNewProcessSession(PlaySessionRequest.GetValue());
+		break;
+	case EPlaySessionDestinationType::Launcher:
+		// Create a Play Session via the Launcher which may be on a local or remote device.
+		StartPlayUsingLauncherSession(PlaySessionRequest.GetValue());
+		break;
+	default:
+		check(false);
+	}
+}
+</pre></table></code></div></div><blockquote class="prompt-tip"><div><p>Any running session will be stopped when new session is requested.</p></div></blockquote><p><strong>CreateInnerProcessPIEGameInstance</strong> function of <strong>UEditorEngine</strong> class will be finally invoked. This function create a new <strong>GameInstance</strong> and initialize it for <strong>PIE</strong> mode. Before dig deeper of <strong>CreateInnerProcessPIEGameInstance</strong>, let’s go through the callstack and do a rough describe for those functions on stack. <img data-src="/img/2022-04-17-What-Happened-After-Press-Play-Button-In-Editor/CreateInstance-Callstack.png" alt="Create Instance Callstack" data-proofer-ignore> <em>Callstack of CreateInnerProcessPIEGameInstance</em></p><blockquote class="prompt-tip"><div><p>This callstack occurred when PIE start with <em>Selected Viewport</em> and <em>Play Standalone</em> set. When play with other settings, the callstack may be different.</p></div></blockquote><div class="table-wrapper"><table><thead><tr><th style="text-align: left">Function<th style="text-align: left">Main Operations<tbody><tr><td style="text-align: left">StartPlayInEditorSession<td style="text-align: left">Do resource check like compile dirty blueprints, and prepare logging classes. Decide NetMode for each instance based on created count.<tr><td style="text-align: left">CreateNewPlayInEditorInstance<td style="text-align: left">Gathering info for <em>PIELoginInfo</em> for instance shared the process with editor. Or launch new process for other instance(for server/multiple clients).<tr><td style="text-align: left">OnLoginPIEComplete_Deferred<td style="text-align: left">Check login result of new created game instances. Stop current session if there is any instance failed to login.<tr><td style="text-align: left">CreateInnerProcessPIEGameInstance<td style="text-align: left">The function actually create new game instance and do initialization.</table></div></div><div class="post-tail-wrapper text-muted"><div class="post-meta mb-3"> <i class="far fa-folder-open fa-fw mr-1"></i> <a href='/categories/unreal-engine/'>Unreal Engine</a>, <a href='/categories/editor/'>Editor</a></div><div class="post-tags"> <i class="fa fa-tags fa-fw mr-1"></i> <a href="/tags/learning-ue/" class="post-tag no-text-decoration" >learning ue</a></div><div class="post-tail-bottom d-flex justify-content-between align-items-center mt-3 pt-5 pb-2"><div class="license-wrapper"> This post is licensed under <a href="https://creativecommons.org/licenses/by/4.0/"> CC BY 4.0 </a> by the author.</div><div class="share-wrapper"> <span class="share-label text-muted mr-1">Share</span> <span class="share-icons"> <a href="https://twitter.com/intent/tweet?text=What+Happened+after+Press+Play+Button+in+Editor+-+Vault&url=https%3A%2F%2Fcymhellfire.github.io%2Fposts%2FWhat-Happened-After-Press-Play-Button-In-Editor%2F" data-toggle="tooltip" data-placement="top" title="Twitter" target="_blank" rel="noopener" aria-label="Twitter"> <i class="fa-fw fab fa-twitter"></i> </a> <a href="https://www.facebook.com/sharer/sharer.php?title=What+Happened+after+Press+Play+Button+in+Editor+-+Vault&u=https%3A%2F%2Fcymhellfire.github.io%2Fposts%2FWhat-Happened-After-Press-Play-Button-In-Editor%2F" data-toggle="tooltip" data-placement="top" title="Facebook" target="_blank" rel="noopener" aria-label="Facebook"> <i class="fa-fw fab fa-facebook-square"></i> </a> <a href="https://t.me/share/url?url=https%3A%2F%2Fcymhellfire.github.io%2Fposts%2FWhat-Happened-After-Press-Play-Button-In-Editor%2F&text=What+Happened+after+Press+Play+Button+in+Editor+-+Vault" data-toggle="tooltip" data-placement="top" title="Telegram" target="_blank" rel="noopener" aria-label="Telegram"> <i class="fa-fw fab fa-telegram"></i> </a> <i id="copy-link" class="fa-fw fas fa-link small" data-toggle="tooltip" data-placement="top" title="Copy link" data-title-succeed="Link copied successfully!"> </i> </span></div></div></div></div></div><div id="panel-wrapper" class="col-xl-3 pl-2 text-muted"><div class="access"><div id="access-lastmod" class="post"><div class="panel-heading">Recently Updated</div><ul class="post-content pl-0 pb-1 ml-1 mt-2"><li><a href="/posts/Recover-Git-Repo-After-Reinstalled-OS/">Recover Git Repo after Reinstalled OS</a><li><a href="/posts/How-To-Add-Customized-Sequence-Track/">How to Add Customized Sequence Track</a><li><a href="/posts/How-To-Add-New-Viewport-In-Editor/">How to Add New Viewport in Editor</a><li><a href="/posts/TOptional/">TOptional Nullable Struct Variable</a><li><a href="/posts/What-Happened-After-Press-Play-Button-In-Editor/">What Happened after Press Play Button in Editor</a></ul></div><div id="access-tags"><div class="panel-heading">Trending Tags</div><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/tags/how-to/">how to</a> <a class="post-tag" href="/tags/learning-ue/">learning ue</a> <a class="post-tag" href="/tags/utils/">utils</a> <a class="post-tag" href="/tags/git/">git</a> <a class="post-tag" href="/tags/sequencer/">sequencer</a></div></div></div><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.js"></script><div id="toc-wrapper" class="pl-0 pr-4 mb-5"><div class="panel-heading pl-3 pt-2 mb-2">Contents</div><nav id="toc" data-toggle="toc"></nav></div></div></div><div class="row"><div id="tail-wrapper" class="col-12 col-lg-11 col-xl-9 pl-3 pr-3 pr-xl-4 mt-5"><div id="related-posts" class="mb-2 mb-sm-4"><h3 class="pt-2 mb-4 ml-1" data-toc-skip>Further Reading</h3><div class="card-deck mb-4"><div class="card"> <a href="/posts/TGuardValue/"><div class="card-body"> <em class="small" data-ts="1650194830" data-df="ll" > Apr 17, 2022 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>TGuardValue Recoverable Value by Scope</h3><div class="text-muted small"><p> TGuardValue1 is a helper struct that can ensure a variable restores its previous value when leaving current scope. Implementation TGuardValue simply backup the original value of input variable, an...</p></div></div></a></div><div class="card"> <a href="/posts/TOptional/"><div class="card-body"> <em class="small" data-ts="1650293655" data-df="ll" > Apr 18, 2022 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>TOptional Nullable Struct Variable</h3><div class="text-muted small"><p> Struct is widely used in Unreal C++ programming. But whenever you want to distinguish an invalid struct value, a special struct instance is always the best choose. With TOptional1 template, there i...</p></div></div></a></div><div class="card"> <a href="/posts/How-To-Add-New-Viewport-In-Editor/"><div class="card-body"> <em class="small" data-ts="1650680184" data-df="ll" > Apr 23, 2022 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>How to Add New Viewport in Editor</h3><div class="text-muted small"><p> This article will introduce how to add a customized viewport of current level in Unreal Editor. All content are based on Unreal Engine 4.27.2 (binary version from Epic Game Launcher). Other ver...</p></div></div></a></div></div></div><div class="post-navigation d-flex justify-content-between"><div class="btn btn-outline-primary disabled" prompt="Older"><p>-</p></div><a href="/posts/TGuardValue/" class="btn btn-outline-primary" prompt="Newer"><p>TGuardValue Recoverable Value by Scope</p></a></div></div></div></div><div id="search-result-wrapper" class="d-flex justify-content-center unloaded"><div class="col-12 col-sm-11 post-content"><div id="search-hints"><div id="access-tags"><div class="panel-heading">Trending Tags</div><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/tags/how-to/">how to</a> <a class="post-tag" href="/tags/learning-ue/">learning ue</a> <a class="post-tag" href="/tags/utils/">utils</a> <a class="post-tag" href="/tags/git/">git</a> <a class="post-tag" href="/tags/sequencer/">sequencer</a></div></div></div><div id="search-results" class="d-flex flex-wrap justify-content-center text-muted mt-3"></div></div></div></div><footer><div class="container pl-lg-4 pr-lg-4"><div class="d-flex justify-content-between align-items-center text-muted ml-md-3 mr-md-3"><div class="footer-left"><p class="mb-0"> © 2022 <a href="https://github.com/cymhellfire">alexymcai</a>. <span data-toggle="tooltip" data-placement="top" title="Except where otherwise noted, the blog posts on this site are licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License by the author.">Some rights reserved.</span></p></div><div class="footer-right"><p class="mb-0"> Powered by <a href="https://jekyllrb.com" target="_blank" rel="noopener">Jekyll</a> with <a href="https://github.com/cotes2020/jekyll-theme-chirpy" target="_blank" rel="noopener">Chirpy</a> theme.</p></div></div></div></footer><div id="mask"></div><a id="back-to-top" href="#" aria-label="back-to-top" class="btn btn-lg btn-box-shadow" role="button"> <i class="fas fa-angle-up"></i> </a> <script src="https://cdn.jsdelivr.net/npm/simple-jekyll-search@1.10.0/dest/simple-jekyll-search.min.js"></script> <script> SimpleJekyllSearch({ searchInput: document.getElementById('search-input'), resultsContainer: document.getElementById('search-results'), json: '/assets/js/data/search.json', searchResultTemplate: '<div class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-lg-4 pr-lg-4 pl-xl-0 pr-xl-0"> <a href="{url}">{title}</a><div class="post-meta d-flex flex-column flex-sm-row text-muted mt-1 mb-1"> {categories} {tags}</div><p>{snippet}</p></div>', noResultsText: '<p class="mt-5">Oops! No result founds.</p>', templateMiddleware: function(prop, value, template) { if (prop === 'categories') { if (value === '') { return `${value}`; } else { return `<div class="mr-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`; } } if (prop === 'tags') { if (value === '') { return `${value}`; } else { return `<div><i class="fa fa-tag fa-fw"></i>${value}</div>`; } } } }); </script> <script src="https://cdn.jsdelivr.net/combine/npm/magnific-popup@1/dist/jquery.magnific-popup.min.js,npm/lozad/dist/lozad.min.js,npm/clipboard@2/dist/clipboard.min.js"></script> <script src="https://cdn.jsdelivr.net/combine/npm/dayjs@1/dayjs.min.js,npm/dayjs@1/locale/en.min.js,npm/dayjs@1/plugin/relativeTime.min.js,npm/dayjs@1/plugin/localizedFormat.min.js"></script> <script defer src="/assets/js/dist/post.min.js"></script> <script src="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/js/bootstrap.bundle.min.js"></script> <script defer src="/unregister.js"></script>
